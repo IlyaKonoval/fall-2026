@@ -14,8 +14,13 @@ def loss_grad(w, x, y):
     return -2 * (1 - M) * y * x
 
 
-def steepest_step(x):
-    return 1.0 / (2 * (x @ x))
+def full_gradient(w, X, y, tau):
+    return -2 * (X.T @ (y * (1 - margin(w, X, y)))) / len(y) + tau * w
+
+
+def steepest_step(g, X, tau):
+    Xg = X @ g
+    return (g @ g) / (2 * (Xg @ Xg) / len(X) + tau * (g @ g))
 
 
 class LinearClassifier:
@@ -68,17 +73,16 @@ class LinearClassifier:
 
         history = {"Q": [], "Q_epoch": [], "train_acc": [], "val_acc": []}
         w_init = w.copy()
+        if self.step == "steepest":
+            return self._fit_steepest(X, y, w, w_init, history, X_val, y_val)
         for _ in range(self.n_epochs):
             Q_prev = Q
             for i in self._epoch_order(w, X, y, rng):
                 x_i, y_i = X[i], y[i]
                 xi = loss((x_i @ w) * y_i)
                 g = loss_grad(w, x_i, y_i)
-                if self.step == "steepest":
-                    h, v = steepest_step(x_i), g
-                else:
-                    h = self.lr
-                    v = self.momentum * v + (1 - self.momentum) * g
+                h = self.lr
+                v = self.momentum * v + (1 - self.momentum) * g
                 w = w * (1 - h * self.tau) - h * v
 
                 Q = lam * xi + (1 - lam) * Q
@@ -95,6 +99,30 @@ class LinearClassifier:
         self.w = w
         self.history = history
         return self
+
+    def _fit_steepest(self, X, y, w, w_init, history, X_val, y_val):
+        Q_prev = self.empirical_risk_of(w, X, y)
+        for _ in range(self.n_epochs):
+            g = full_gradient(w, X, y, self.tau)
+            w = w - steepest_step(g, X, self.tau) * g
+            Q = self.empirical_risk_of(w, X, y)
+            history["Q"].append(Q)
+            history["Q_epoch"].append(Q)
+            history["train_acc"].append(np.mean(self._sign(X @ w) == y))
+            if X_val is not None:
+                history["val_acc"].append(np.mean(self._sign(X_val @ w) == y_val))
+            if abs(Q - Q_prev) < self.tol:
+                break
+            Q_prev = Q
+
+        self.w_init = w_init
+        self.w = w
+        self.history = history
+        return self
+
+    @staticmethod
+    def empirical_risk_of(w, X, y):
+        return loss(margin(w, X, y)).mean()
 
     @staticmethod
     def _sign(z):

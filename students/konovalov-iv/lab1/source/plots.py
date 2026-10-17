@@ -30,15 +30,19 @@ def plot_margins(margins_by_title, path):
     plt.close(fig)
 
 
-def plot_training(models_by_label, path, title):
+def plot_training(models_by_label, path, title, per_epoch=False):
     fig, (ax_q, ax_acc) = plt.subplots(1, 2, figsize=(12, 4))
     for label, model in models_by_label.items():
-        ax_q.plot(model.history["Q"], label=label)
+        if per_epoch:
+            q = model.history["Q_epoch"]
+            ax_q.plot(np.arange(1, len(q) + 1), q, label=label)
+        else:
+            ax_q.plot(model.history["Q"], label=label)
         epochs = np.arange(1, len(model.history["val_acc"]) + 1)
         ax_acc.plot(epochs, model.history["val_acc"], label=label)
     ax_q.set_yscale("log")
-    ax_q.set_xlabel("итерация (предъявленный объект)")
-    ax_q.set_ylabel("рекуррентная оценка Q (лог. шкала)")
+    ax_q.set_xlabel("эпоха" if per_epoch else "итерация (предъявленный объект)")
+    ax_q.set_ylabel("Q в конце эпохи (лог. шкала)" if per_epoch else "рекуррентная оценка Q (лог. шкала)")
     ax_q.set_title("Сходимость функционала Q")
     ax_acc.set_xlabel("эпоха")
     ax_acc.set_ylabel("accuracy на тесте")

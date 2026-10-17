@@ -93,8 +93,8 @@ def main():
                   IMAGES / "training_order.png", "Порядок предъявления объектов")
     plot_training({"SGD с инерцией, γ = 0.9": models["случайный порядок"],
                    "SGD без инерции": models["SGD без инерции"],
-                   "скорейший спуск, h* = 1/(2‖x‖²)": models["скорейший спуск"]},
-                  IMAGES / "training_step.png", "Инерция и выбор шага")
+                   "скорейший спуск": models["скорейший спуск"]},
+                  IMAGES / "training_step.png", "Инерция и выбор шага", per_epoch=True)
     plot_multistart(risks, IMAGES / "multistart.png")
     plot_comparison(results, IMAGES / "comparison.png")
     print(f"\nграфики сохранены в {IMAGES}")
